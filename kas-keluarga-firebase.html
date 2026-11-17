@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#123b32"><title>Kas Keluarga</title>
+<style>
+:root{--green:#123b32;--mint:#e8f3ee;--bg:#f4f7f5;--ink:#18231f;--muted:#68766f;--line:#e1e9e4;--red:#b64242}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px system-ui,-apple-system,Segoe UI,sans-serif}
+header{background:var(--green);color:white;padding:20px 16px 24px}header h1{margin:0;font-size:22px}header p{margin:5px 0 0;color:#d1e5dc;font-size:13px}
+main{max-width:760px;margin:auto;padding:16px}.card{background:white;border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:14px;box-shadow:0 2px 8px #10291c08}
+h2{font-size:17px;margin:0 0 12px}.muted{color:var(--muted);font-size:13px}.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.stat{background:var(--mint);border-radius:12px;padding:13px}.stat small{display:block;color:#52665b}.stat strong{font-size:19px;display:block;margin-top:4px}
+input,select,button{font:inherit}input,select{width:100%;padding:12px;border:1px solid #cfdad3;border-radius:10px;background:white;margin:5px 0 11px}label{font-size:13px;font-weight:600}
+button{border:0;border-radius:10px;background:var(--green);color:white;padding:12px 15px;font-weight:650;cursor:pointer}button.secondary{background:#eaf1ed;color:var(--green)}button.danger{background:#fff0f0;color:var(--red)}button:disabled{opacity:.5}
+.tabs{display:flex;gap:7px;overflow:auto;margin-bottom:14px}.tabs button{white-space:nowrap;padding:10px 13px}.tabs button.active{background:#dcebe3;color:var(--green)}
+.row{display:flex;justify-content:space-between;gap:10px;align-items:center}.hidden{display:none!important}.item{padding:11px 0;border-bottom:1px solid var(--line)}.item:last-child{border:0}.amount.income{color:#18764e}.amount.expense{color:var(--red)}
+form .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}.notice{background:#fff8e6;border:1px solid #f0dfae;padding:12px;border-radius:10px;font-size:13px;margin-bottom:12px}
+canvas{width:100%;height:190px}.pill{font-size:11px;background:#edf2ef;border-radius:20px;padding:4px 8px}
+@media(max-width:420px){.grid{grid-template-columns:1fr 1fr}.stat strong{font-size:16px}main{padding:12px}}
+</style>
+</head>
+<body>
+<header><h1>Kas Keluarga</h1><p>Catatan keuangan bersama • Rupiah</p></header>
+<main>
+<section id="login" class="card">
+<h2>Masuk ke Kas Keluarga</h2>
+<p class="muted">Gunakan satu email dan password keluarga yang sudah dibuat di Firebase Authentication.</p>
+<label>Email keluarga</label><input id="email" type="email" autocomplete="username" placeholder="nama@email.com">
+<label>Password</label><input id="password" type="password" autocomplete="current-password" placeholder="Password">
+<button id="loginBtn" style="width:100%">Masuk</button><p id="loginMsg" class="muted"></p>
+</section>
+<section id="app" class="hidden">
+<div class="card row"><div><strong id="userEmail"></strong><div class="muted">Akun keluarga aktif</div></div><button class="secondary" id="logoutBtn">Keluar</button></div>
+<div class="grid">
+<div class="stat"><small>Saldo bersih</small><strong id="balance">Rp0</strong></div>
+<div class="stat"><small>Pemasukan bulan ini</small><strong id="income">Rp0</strong></div>
+<div class="stat"><small>Pengeluaran bulan ini</small><strong id="expense">Rp0</strong></div>
+<div class="stat"><small>Selisih bulan ini</small><strong id="net">Rp0</strong></div>
+</div>
+<div class="tabs">
+<button class="active" data-tab="transactions">Transaksi</button><button data-tab="savings">Tabungan</button><button data-tab="debts">Utang</button><button data-tab="reports">Laporan</button>
+</div>
+<section id="transactions" class="card pane">
+<h2>Tambah transaksi</h2>
+<form id="txForm">
+<div class="two"><div><label>Jenis</label><select id="type"><option value="income">Pemasukan</option><option value="expense">Pengeluaran</option></select></div><div><label>Tanggal</label><input id="date" type="date" required></div></div>
+<div class="two"><div><label>Nominal (Rp)</label><input id="amount" type="number" min="1" required placeholder="50000"></div><div><label>Kategori</label><select id="category"><option>Gaji</option><option>Belanja</option><option>Makan</option><option>Transportasi</option><option>Pendidikan</option><option>Kesehatan</option><option>Tagihan</option><option>Lainnya</option></select></div></div>
+<label>Nama anggota yang mencatat</label><input id="member" required placeholder="Contoh: Ayah / Ibu">
+<label>Keterangan</label><input id="note" placeholder="Opsional">
+<button type="submit">Simpan transaksi</button>
+</form>
+</section>
+<section id="savings" class="card pane hidden"><h2>Tabungan keluarga</h2>
+<form id="savingForm"><label>Nama tujuan tabungan</label><input id="savingName" required placeholder="Contoh: Dana liburan"><div class="two"><div><label>Target (Rp)</label><input id="savingTarget" type="number" min="0" placeholder="1000000"></div><div><label>Setoran awal (Rp)</label><input id="savingInitial" type="number" min="0" value="0"></div></div><label>Dicatat oleh</label><input id="savingMember" required placeholder="Nama anggota"><button>Simpan tabungan</button></form><div id="savingList"></div></section>
+<section id="debts" class="card pane hidden"><h2>Utang dan piutang</h2>
+<form id="debtForm"><div class="two"><div><label>Jenis</label><select id="debtType"><option value="debt">Utang keluarga</option><option value="receivable">Piutang keluarga</option></select></div><div><label>Nominal (Rp)</label><input id="debtAmount" type="number" min="1" required></div></div><label>Nama / keterangan</label><input id="debtName" required placeholder="Contoh: Pinjaman ke ..."><label>Dicatat oleh</label><input id="debtMember" required placeholder="Nama anggota"><button>Simpan catatan</button></form><div id="debtList"></div></section>
+<section id="reports" class="card pane hidden"><h2>Laporan bulanan</h2><label>Pilih bulan</label><input id="month" type="month"><div id="reportText" class="muted"></div><canvas id="chart" width="650" height="190"></canvas><button class="secondary" id="exportBtn">Ekspor transaksi CSV (Excel)</button></section>
+<section class="card"><div class="row"><h2 style="margin:0">Riwayat transaksi</h2><span class="pill" id="count">0 transaksi</span></div><div id="txList" class="muted">Memuat data...</div></section>
+<p class="muted">Data tersimpan di Firebase dan digunakan bersama oleh perangkat yang masuk dengan akun keluarga ini.</p>
+</section>
+</main>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, deleteDoc, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+const firebaseConfig = {
+ apiKey: "AIzaSyB4vKI0v2asLLvYfaNdMVtqy2IfiqaIS7E",
+ authDomain: "kas-keluarga-heldi.firebaseapp.com",
+ projectId: "kas-keluarga-heldi",
+ storageBucket: "kas-keluarga-heldi.firebasestorage.app",
+ messagingSenderId: "337749289373",
+ appId: "1:337749289373:web:06c99d088f86fd71b82774",
+ measurementId: "G-NE7LBJ2N2E"
+};
+const app=initializeApp(firebaseConfig), auth=getAuth(app), db=getFirestore(app);
+const root=collection(db,"families","kas-keluarga","transactions"), savingsRoot=collection(db,"families","kas-keluarga","savings"), debtsRoot=collection(db,"families","kas-keluarga","debts");
+const $=id=>document.getElementById(id), rupiah=n=>new Intl.NumberFormat("id-ID",{style:"currency",currency:"IDR",maximumFractionDigits:0}).format(Number(n)||0);
+let transactions=[], savings=[], debts=[], unsubs=[];
+$("date").value=new Date().toISOString().slice(0,10);$("month").value=new Date().toISOString().slice(0,7);
+$("loginBtn").onclick=async()=>{ $("loginMsg").textContent="Sedang masuk..."; try{await signInWithEmailAndPassword(auth,$("email").value.trim(),$("password").value)}catch(e){$("loginMsg").textContent="Gagal masuk: periksa email/password dan aturan Firebase ("+e.code+")"}};
+$("logoutBtn").onclick=()=>signOut(auth);
+onAuthStateChanged(auth,user=>{unsubs.forEach(f=>f());unsubs=[];if(user){$("login").classList.add("hidden");$("app").classList.remove("hidden");$("userEmail").textContent=user.email||"Akun keluarga";listen()}else{$("app").classList.add("hidden");$("login").classList.remove("hidden")}});
+function listen(){
+ const watch=(ref,cb)=>unsubs.push(onSnapshot(query(ref,orderBy("createdAt","desc")),s=>cb(s.docs.map(d=>({id:d.id,...d.data()}))),e=>alert("Gagal membaca data: "+e.message)));
+ watch(root,d=>{transactions=d;render()});watch(savingsRoot,d=>{savings=d;renderSavings()});watch(debtsRoot,d=>{debts=d;renderDebts()});
+}
+$("txForm").onsubmit=async e=>{e.preventDefault();try{await addDoc(root,{type:$("type").value,date:$("date").value,amount:Number($("amount").value),category:$("category").value,member:$("member").value.trim(),note:$("note").value.trim(),createdAt:serverTimestamp()});e.target.reset();$("date").value=new Date().toISOString().slice(0,10)}catch(err){alert("Tidak dapat menyimpan: "+err.message)}};
+$("savingForm").onsubmit=async e=>{e.preventDefault();try{await addDoc(savingsRoot,{name:$("savingName").value,target:Number($("savingTarget").value)||0,balance:Number($("savingInitial").value)||0,member:$("savingMember").value,createdAt:serverTimestamp()});e.target.reset()}catch(err){alert(err.message)}};
+$("debtForm").onsubmit=async e=>{e.preventDefault();try{await addDoc(debtsRoot,{type:$("debtType").value,amount:Number($("debtAmount").value),name:$("debtName").value,member:$("debtMember").value,createdAt:serverTimestamp()});e.target.reset()}catch(err){alert(err.message)}};
+function render(){const m=$("month").value, monthTx=transactions.filter(t=>(t.date||"").startsWith(m));const inc=monthTx.filter(t=>t.type==="income").reduce((a,t)=>a+t.amount,0),exp=monthTx.filter(t=>t.type==="expense").reduce((a,t)=>a+t.amount,0),all=transactions.reduce((a,t)=>a+(t.type==="income"?t.amount:-t.amount),0);$("balance").textContent=rupiah(all);$("income").textContent=rupiah(inc);$("expense").textContent=rupiah(exp);$("net").textContent=rupiah(inc-exp);$("count").textContent=transactions.length+" transaksi";$("txList").innerHTML=transactions.length?transactions.map(t=>`<div class="item row"><div><strong>${esc(t.category||"Transaksi")}</strong><div class="muted">${esc(t.date||"")} • ${esc(t.member||"")} ${t.note?"• "+esc(t.note):""}</div></div><div style="text-align:right"><strong class="amount ${t.type}">${t.type==="income"?"+":"−"}${rupiah(t.amount)}</strong><br><button class="danger" style="padding:5px 8px;margin-top:5px;font-size:11px" data-del="${t.id}">Hapus</button></div></div>`).join(""):"Belum ada transaksi.";document.querySelectorAll("[data-del]").forEach(b=>b.onclick=async()=>{if(confirm("Hapus transaksi ini?"))await deleteDoc(doc(db,"families","kas-keluarga","transactions",b.dataset.del))});renderReport()}
+function renderSavings(){$("savingList").innerHTML=savings.map(s=>`<div class="item"><strong>${esc(s.name)}</strong><div class="muted">Saldo ${rupiah(s.balance)} / Target ${rupiah(s.target)} • ${esc(s.member||"")}</div></div>`).join("")||'<p class="muted">Belum ada tabungan.</p>'}
+function renderDebts(){$("debtList").innerHTML=debts.map(d=>`<div class="item row"><div><strong>${d.type==="debt"?"Utang":"Piutang"}: ${esc(d.name)}</strong><div class="muted">Dicatat oleh ${esc(d.member||"")}</div></div><strong>${rupiah(d.amount)}</strong></div>`).join("")||'<p class="muted">Belum ada catatan utang/piutang.</p>'}
+function renderReport(){const m=$("month").value,arr=transactions.filter(t=>(t.date||"").startsWith(m)),i=arr.filter(t=>t.type==="income").reduce((a,t)=>a+t.amount,0),e=arr.filter(t=>t.type==="expense").reduce((a,t)=>a+t.amount,0);$("reportText").textContent=`${arr.length} transaksi • Pemasukan ${rupiah(i)} • Pengeluaran ${rupiah(e)} • Selisih ${rupiah(i-e)}`;const c=$("chart"),ctx=c.getContext("2d");ctx.clearRect(0,0,c.width,c.height);const max=Math.max(i,e,1);ctx.fillStyle="#23835d";ctx.fillRect(110,25,Math.max(2,400*i/max),42);ctx.fillStyle="#c45b55";ctx.fillRect(110,100,Math.max(2,400*e/max),42);ctx.fillStyle="#24352c";ctx.font="16px system-ui";ctx.fillText("Masuk",15,52);ctx.fillText("Keluar",15,127);ctx.fillText(rupiah(i),Math.min(520,120+400*i/max),52);ctx.fillText(rupiah(e),Math.min(520,120+400*e/max),127)}
+$("month").onchange=render;
+document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{document.querySelectorAll("[data-tab]").forEach(x=>x.classList.toggle("active",x===b));document.querySelectorAll(".pane").forEach(p=>p.classList.toggle("hidden",p.id!==b.dataset.tab))});
+$("exportBtn").onclick=()=>{const rows=[["Tanggal","Jenis","Kategori","Nominal","Anggota","Keterangan"],...transactions.filter(t=>(t.date||"").startsWith($("month").value)).map(t=>[t.date,t.type==="income"?"Pemasukan":"Pengeluaran",t.category,t.amount,t.member,t.note])];const csv="\ufeff"+rows.map(r=>r.map(v=>'"'+String(v??"").replaceAll('"','""')+'"').join(";")).join("\r\n");const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));a.download="laporan-kas-keluarga-"+$("month").value+".csv";a.click();URL.revokeObjectURL(a.href)};
+function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+</script></body></html>
